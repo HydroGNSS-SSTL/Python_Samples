@@ -2,10 +2,10 @@ import os
 import paramiko
 from datetime import datetime, timedelta
 
-USER_FTP_HOST = "kiteworks.sstl.co.uk"
+USER_FTP_HOST = "MyHostname"
 USER_FTP_PORT=22
-USER_FTP_USERNAME = "hydrognss_user@sstl.co.uk"
-USER_FTP_PASSWORD = "WhiskyLazyCrates6$*%"
+USER_FTP_USERNAME = "MyUsername"
+USER_FTP_PASSWORD = "MyPassword"
 USER_FTP_ROOT_FOLDER = "public"
 
 DOWNLOAD_ROOT_FOLDER = r"C:\SSTL\DownloadTest"
