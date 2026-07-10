@@ -6,6 +6,8 @@ import numpy as np
 import os
 
 DATA_ROOT_FOLDER = r"C:\SSTL\DownloadTest"
+DATA_ROOT_FOLDER = r"Q:\Live\User_FTP"
+
 def getDateTimeFolder(startTime:datetime, endTime:datetime)->str:
     midPointTime = startTime + (endTime - startTime) / 2
 
@@ -75,15 +77,15 @@ def  readAll6HourProducts(satellite, startTime, endTime):
         posFixValidArray = l1MergedFile['/PositionFixValidity'][:]
         numberOfValidPositionFixes = 0
         numberOfValidSMs = 0
-        numberOfValidWPs = 0
+        numberOfValidWaterProbs = 0
         numberOfValidCoherentWPs = 0
         numberOfValidFBs = 0
         numberOfValidFTs = 0
-        numberOfValidWSs = 0
+        numberOfValidWindSpeeds = 0
         numberOfValidSeaIces = 0
 
         for value in posFixValidArray:
-            if value == 3:
+            if value == 2:
                 numberOfValidPositionFixes += 1
 
         percentValidPosFixes = 100 * numberOfValidPositionFixes / len(posFixValidArray)
@@ -102,7 +104,7 @@ def  readAll6HourProducts(satellite, startTime, endTime):
             elif smFile is not None and track in smFile:
 
                 soilMoistureArray = smFile['/' + track + '/SoilMoisture'][:]
-                qualityFlagArray = smFile['/' + track + '/QualityFlag'][:]
+                qualityFlagArray = smFile['/' + track + '/SSMQuality'][:]
 
                 usedSMs = []
                 for (quality, soilMoisture) in zip(qualityFlagArray, soilMoistureArray):
@@ -131,9 +133,9 @@ def  readAll6HourProducts(satellite, startTime, endTime):
                     usedIncoherentWPs = []
 
                     for (waterProbability, siQuality) in zip(waterProbabilityIncoherentArray, siOverallQualityFlagsArray):
-                        if siQuality == 1:
+                        if siQuality == 0:
                             usedIncoherentWPs.append(waterProbability)
-                            numberOfValidWPs = numberOfValidWPs + 1
+                            numberOfValidWaterProbs = numberOfValidWaterProbs + 1
 
                 # Coherent data:
                 # For TDS-1 the coherent SI params are scalars, i.e. effectively there is no data
@@ -174,7 +176,7 @@ def  readAll6HourProducts(satellite, startTime, endTime):
                 usedFBs = []
 
                 for (quality, agb) in zip(qualityFlagArray, agbArray):
-                    if quality == 1 and not math.isnan(agb):
+                    if quality == 0 and not math.isnan(agb):
                         usedFBs.append(agb)
                         numberOfValidFBs = numberOfValidFBs + 1
 
@@ -184,17 +186,21 @@ def  readAll6HourProducts(satellite, startTime, endTime):
             usedFTs = []
 
             currentFile = filePath_L2OP_FT
-            if ftFile is not None and not track in ftFile:
-                print(f"Missing track {track} in {filePath_L2OP_FT}")
-            elif ftFile is not None  and track in ftFile:
 
-                ftArray = ftFile['/' + track + '/FreezeThawState'][:]
+            if ftFile is not None:
 
-                qualityFlagArray = ftFile['/' + track + '/LowOverallQuality'][:]
-                for (quality, ft) in zip(qualityFlagArray, ftArray):
-                    if quality and not math.isnan(ft):
-                        usedFTs.append(ft)
-                        numberOfValidFTs = numberOfValidFTs + 1
+                if not track in ftFile:
+                    print(f"Missing track {track} in {filePath_L2OP_FT}")
+                elif not track + '/FreezeThawState' in ftFile:
+                    print(f"Missing FreezeThawState in track {track} in {filePath_L2OP_FT}")
+                else:
+                    ftArray = ftFile['/' + track + '/FreezeThawState'][:]
+
+                    qualityFlagArray = ftFile['/' + track + '/LowOverallQuality'][:]
+                    for (quality, ft) in zip(qualityFlagArray, ftArray):
+                        if quality == 0 and not math.isnan(ft):
+                            usedFTs.append(ft)
+                            numberOfValidFTs = numberOfValidFTs + 1
 
             currentFile = filePath_L2OP_SWS
             if swsFile is not None and not track in swsFile:
@@ -216,18 +222,18 @@ def  readAll6HourProducts(satellite, startTime, endTime):
 
                         if surfaceWindSpeed != -9999.0:
                             usedWSs.append(surfaceWindSpeed)
-                            numberOfValidWSs = numberOfValidWSs + 1
+                            numberOfValidWindSpeeds = numberOfValidWindSpeeds + 1
 
                 else:
                     print(f"No SI sea ice field in track {track} in {filePath_L2OP_SWS}.")
 
         print(f"numberOfValidSMs is {numberOfValidSMs}")
-        print(f"numberOfValidWPs is {numberOfValidWPs}")
+        print(f"numberOfValidWaterProbs is {numberOfValidWaterProbs}")
         print(f"numberOfValidCoherentWPs is {numberOfValidCoherentWPs}")
         print(f"numberOfValidFBs is {numberOfValidFBs}")
         print(f"numberOfValidFTs is {numberOfValidFTs}")
         print(f"numberOfValidSeaIces is {numberOfValidSeaIces}")
-        print(f"numberOfValidWSs is {numberOfValidWSs}")
+        print(f"numberOfValidWindSpeeds is {numberOfValidWindSpeeds}")
 
     except Exception as e:
         # List exception and the file that failed
@@ -236,8 +242,8 @@ def  readAll6HourProducts(satellite, startTime, endTime):
 def main():
 
     # Download all 6-hour files between these dates
-    startTime = datetime(2018, 2, 7, 21, 0, 0)
-    endTime = datetime(2018, 2, 8, 3, 0, 0)
+    startTime = datetime(2026, 6, 28, 21, 0, 0)
+    endTime = datetime(2026, 6, 29, 3, 0, 0)
 
     satellites = ["HydroGNSS-1", "HydroGNSS-2"]
 
