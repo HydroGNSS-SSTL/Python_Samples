@@ -2,11 +2,10 @@ import os
 import paramiko
 from datetime import datetime, timedelta
 
-USER_FTP_HOST = "MyHostname"
-USER_FTP_PORT=22
-USER_FTP_USERNAME = "MyUsername"
-USER_FTP_PASSWORD = "MyPassword"
-USER_FTP_ROOT_FOLDER = "public"
+USER_FTP_HOST = "sftp.hydrognss.org"
+USER_FTP_PORT=2222
+USER_FTP_USERNAME = "username"
+USER_FTP_PASSWORD = "password"
 
 DOWNLOAD_ROOT_FOLDER = r"C:\SSTL\DownloadTest"
 
@@ -47,19 +46,18 @@ def downloadProductsFromFolder(productFolder:str, satellite:str, startTime:datet
 
     downloadFolder = getDownloadFolderForTimeAndModule(productFolder, satellite, startTime, endTime)
 
-    if not os.path.exists(DOWNLOAD_ROOT_FOLDER):
-        print(f"Cannot copy from HydroGNSS SFTP, folder {DOWNLOAD_ROOT_FOLDER} does not exist on local disk")
-        return
-
     try:
         # create ssh connection:
         transport = paramiko.Transport((USER_FTP_HOST, int(USER_FTP_PORT)))
         transport.connect(username=USER_FTP_USERNAME, password=USER_FTP_PASSWORD)
+        transport.packet_size = 1048576
+        transport.window_size = 1073741824 
+        transport.set_keepalive(30) # Prevents timeout drops during long downloads
 
         # create an SFTP client object
         sftp = paramiko.SFTPClient.from_transport(transport)
 
-        folderOnSftpSite = '/' + USER_FTP_ROOT_FOLDER + '/' + downloadFolder
+        folderOnSftpSite = '/' + downloadFolder
 
         # cd to the directory on the FTP site, creating sub-folders if they don't exist
         sftp.chdir(folderOnSftpSite)
@@ -76,6 +74,8 @@ def downloadProductsFromFolder(productFolder:str, satellite:str, startTime:datet
         if not os.path.exists(downloadToFolder):
             os.makedirs(downloadToFolder)
 
+        print(f"Downloading {filenames} from {folderOnSftpSite} on HydroGNSS SFTP site")
+ 
         for filename in filenames:
 
             localFilePath = os.path.join(downloadToFolder, filename)
@@ -90,7 +90,21 @@ def downloadProductsFromFolder(productFolder:str, satellite:str, startTime:datet
             if os.path.exists(localFilePath):
                 os.remove(localFilePath)
 
-            sftp.get(filePathOnSftp, localFilePath)
+            # sftp.get(filePathOnSftp, localFilePath)
+            
+            # Open remote file in read-binary, local file in write-binary
+            with sftp.open(filePathOnSftp, 'rb') as remote_file:
+                # Disable default prefetch if it causes memory bloating or freezes
+                remote_file.set_pipelined(True) 
+                
+                with open(localFilePath, 'wb') as local_file:
+                    # Stream in 1MB chunks
+                    chunk_size = 1024 * 1024 
+                    while True:
+                        chunk = remote_file.read(chunk_size)
+                        if not chunk:
+                            break
+                        local_file.write(chunk)
 
         # Check all the files downloaded successfully:
         localDirListing = os.listdir(downloadToFolder)
@@ -107,6 +121,8 @@ def downloadProductsFromFolder(productFolder:str, satellite:str, startTime:datet
 
     except Exception as e:
         print(f"Download from HydroGNSS SFTP failed for {downloadFolder}: {e}")
+        
+    transport.close()
 
 def downloadAll6HourProducts(startTime:datetime, endTime:datetime):
 
@@ -114,7 +130,7 @@ def downloadAll6HourProducts(startTime:datetime, endTime:datetime):
     print(f"Product download starting at " + downloadStartTime.isoformat(sep=' ', timespec='milliseconds'))
 
     pdgsProductFolders = ["L1A_L1B", "L2OP-FB", "L2OP-FT", "L2OP-SI", "L2OP-SSM", "L2OP-SWS"]
-
+    
     satellites = ["HydroGNSS-1", "HydroGNSS-2"]
 
     for satellite in satellites:
@@ -134,8 +150,8 @@ def downloadAll6HourProducts(startTime:datetime, endTime:datetime):
 def main():
 
     # Download all 6-hour files between these dates
-    startTime = datetime(2018, 2, 7, 21, 0, 0)
-    endTime = datetime(2018, 2, 8, 3, 0, 0)
+    startTime = datetime(2026, 8, 7, 21, 0, 0)
+    endTime = datetime(2026, 8, 8, 3, 0, 0)
 
     downloadAll6HourProducts(startTime, endTime)
 

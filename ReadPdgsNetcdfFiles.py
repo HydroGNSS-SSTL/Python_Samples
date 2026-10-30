@@ -1,4 +1,3 @@
-
 from datetime import datetime
 import h5py
 import math
@@ -6,12 +5,12 @@ import numpy as np
 import os
 
 DATA_ROOT_FOLDER = r"C:\SSTL\DownloadTest"
-DATA_ROOT_FOLDER = r"Q:\Live\User_FTP"
 
 def getDateTimeFolder(startTime:datetime, endTime:datetime)->str:
-    midPointTime = startTime + (endTime - startTime) / 2
 
+    midPointTime = startTime + (endTime - startTime) / 2
     return midPointTime.strftime("%Y-%m/%d/H%H")
+    
 def  readAll6HourProducts(satellite, startTime, endTime):
 
     dateFolder = getDateTimeFolder(startTime, endTime)
@@ -138,8 +137,6 @@ def  readAll6HourProducts(satellite, startTime, endTime):
                             numberOfValidWaterProbs = numberOfValidWaterProbs + 1
 
                 # Coherent data:
-                # For TDS-1 the coherent SI params are scalars, i.e. effectively there is no data
-
                 if track + '/High_Resolution' not in siFile:
                     print(f"No High_Resolution group for track {track} in {currentFile}")
 
@@ -166,8 +163,9 @@ def  readAll6HourProducts(satellite, startTime, endTime):
                                 numberOfValidCoherentWPs = numberOfValidCoherentWPs  + 1
 
             currentFile = filePath_L2OP_FB
-            if fbFile is not None and not track in fbFile:
+            if fbFile is not None and not track in fbFile:               
                 print(f"Missing track {track} in {filePath_L2OP_FB}")
+                
             elif fbFile is not None and track in fbFile:  # Last track was missing in one dataset
 
                 agbArray = fbFile['/' + track + '/AGB'][:]
@@ -241,9 +239,9 @@ def  readAll6HourProducts(satellite, startTime, endTime):
 
 def main():
 
-    # Download all 6-hour files between these dates
-    startTime = datetime(2026, 6, 28, 21, 0, 0)
-    endTime = datetime(2026, 6, 29, 3, 0, 0)
+    # Read all 6-hour files between these dates
+    startTime = datetime(2026, 8, 7, 21, 0, 0)
+    endTime = datetime(2026, 8, 8, 3, 0, 0)
 
     satellites = ["HydroGNSS-1", "HydroGNSS-2"]
 
